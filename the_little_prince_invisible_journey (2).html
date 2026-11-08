@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
+    <title>小王子的星際漂流</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+TC:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['"Noto Serif TC"', 'serif'],
+                        cinzel: ['"Cinzel"', 'serif'],
+                        sans: ['"Inter"', 'sans-serif'],
+                    },
+                    colors: {
+                        prince: {
+                            gold: '#ffd166',
+                            rose: '#ff4d6d',
+                            night: '#090a16',
+                            balloonGold: '#f9ca24',
+                            balloonGreen: '#27ae60',
+                            balloonRose: '#e74c3c'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: radial-gradient(circle at 50% 15%, #161936 0%, #080914 100%);
+            font-family: 'Noto Serif TC', serif;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .canvas-shadow {
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 35px rgba(255, 209, 102, 0.12);
+        }
+        .text-glow {
+            text-shadow: 0 0 12px rgba(255, 209, 102, 0.6);
+        }
+        @keyframes float-gentle {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float {
+            animation: float-gentle 3.2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col justify-between overflow-x-hidden p-2 sm:p-4">
+
+    <!-- 頂部導航列與音效按鈕 -->
+    <header class="w-full max-w-5xl mx-auto flex items-center justify-between py-2 px-3 border-b border-white/10 text-xs sm:text-sm">
+        <div></div>
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <button id="btn-sound" class="px-2.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/15 transition flex items-center space-x-1">
+                <span id="sound-icon">🔔</span>
+                <span id="sound-text" class="hidden sm:inline">音效：開</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主遊戲舞台 -->
+    <main class="w-full max-w-5xl mx-auto flex-1 flex flex-col items-center justify-center my-2 sm:my-3">
+        <!-- 標題區域 -->
+        <div class="text-center mb-2 sm:mb-3">
+            <h1 class="text-xl sm:text-3xl font-bold tracking-widest text-prince-gold text-glow mb-1">
+                小王子的星際漂流
+            </h1>
+        </div>
+
+        <!-- 遊戲主容器 -->
+        <div class="relative w-full canvas-shadow rounded-2xl overflow-hidden border border-white/15 bg-prince-night" style="max-width: 860px; aspect-ratio: 16/9;">
+            
+            <!-- Canvas 渲染畫布 -->
+            <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+            <!-- 浮動 HUD 儀表板 -->
+            <div class="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none select-none">
+                <!-- 左側：穿越星球與星星計數 -->
+                <div class="flex flex-col sm:flex-row gap-1.5 sm:gap-4 bg-slate-900/70 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 text-xs sm:text-sm shadow-lg">
+                    <div class="flex items-center space-x-1.5">
+                        <span class="text-amber-300">☄️</span>
+                        <span class="text-slate-400 font-sans">掠過星體：</span>
+                        <span id="ui-score" class="font-cinzel font-bold text-amber-200 text-sm sm:text-base">0</span>
+                        <span class="text-[10px] text-slate-400">群</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                        <span class="text-amber-300">⭐</span>
+                        <span class="text-slate-400 font-sans">星星：</span>
+                        <span id="ui-essence" class="font-cinzel font-bold text-amber-300 text-sm sm:text-base">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 大人星球互動對話視窗 (遇見大人時觸發) -->
+            <div id="dialogue-modal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-40">
+                <div class="max-w-md w-full bg-slate-900/95 border border-amber-400/40 rounded-2xl p-5 sm:p-6 shadow-2xl relative text-left">
+                    <div class="flex items-center space-x-3 mb-3 border-b border-white/10 pb-3">
+                        <div id="char-avatar" class="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-2xl">
+                            👑
+                        </div>
+                        <div>
+                            <div id="char-planet" class="text-[11px] text-amber-300/80 font-sans tracking-wider">第 325 號小行星</div>
+                            <h3 id="char-name" class="font-bold text-slate-100 text-base sm:text-lg">統治一切的國王</h3>
+                        </div>
+                    </div>
+
+                    <div id="dialogue-content" class="min-h-[78px] mb-4 space-y-2 text-xs sm:text-sm leading-relaxed text-slate-200">
+                        <!-- 對話文字動態渲染 -->
+                    </div>
+
+                    <div class="flex justify-between items-center pt-2">
+                        <span class="text-[11px] text-slate-400">⭐ 停留於此星球，不會墜毀</span>
+                        <button id="btn-dialogue-continue" class="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold text-xs sm:text-sm transition shadow-md">
+                            告別並繼續啟程 ➔
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 開始引導畫面 (Cover) -->
+            <div id="start-screen" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-10 transition-opacity duration-300">
+                <!-- 風格統一的小王子與玻璃罩玫瑰手繪向量插圖 -->
+                <div class="relative w-44 h-28 flex items-center justify-center mb-2 animate-float">
+                    <svg viewBox="0 0 160 110" class="w-full h-full drop-shadow-[0_0_15px_rgba(255,209,102,0.25)]" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <radialGradient id="roseGlow" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#ff4d6d" stop-opacity="0.6"/>
+                                <stop offset="100%" stop-color="#ff4d6d" stop-opacity="0"/>
+                            </radialGradient>
+                            <radialGradient id="planetGlow" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#ffd166" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="#ffd166" stop-opacity="0"/>
+                            </radialGradient>
+                        </defs>
+
+                        <!-- 地平線微弧度 (B-612 迷你小行星地表) -->
+                        <path d="M 12 103 Q 80 94 148 103" stroke="rgba(255, 209, 102, 0.35)" stroke-width="1.5" stroke-linecap="round"/>
+                        <ellipse cx="80" cy="104" rx="55" ry="8" fill="url(#planetGlow)"/>
+
+                        <!-- === 小王子 (左側，靜靜佇立守望玫瑰) === -->
+                        <!-- 深空微星點綴 -->
+                        <circle cx="42" cy="24" r="1.5" fill="#ffd166" opacity="0.8"/>
+                        <circle cx="56" cy="16" r="1.2" fill="#fff" opacity="0.7"/>
+                        <circle cx="34" cy="36" r="1.3" fill="#ffd166" opacity="0.6"/>
+
+                        <!-- 金色飄逸長圍巾 -->
+                        <path d="M 44 63 Q 28 58 14 66 Q 26 62 44 65 Z" fill="#f9ca24" stroke="#ffd166" stroke-width="0.8"/>
+
+                        <!-- 綠色大衣長袍 (纖細修長梯形) -->
+                        <polygon points="44,63 56,63 58,88 42,88" fill="#27ae60"/>
+
+                        <!-- 紅領口與金腰帶 -->
+                        <rect x="47" y="63" width="6" height="3" rx="1" fill="#e74c3c"/>
+                        <rect x="47" y="75" width="6" height="2.5" rx="0.5" fill="#f1c40f"/>
+
+                        <!-- 雙腿 -->
+                        <rect x="45" y="88" width="3" height="7" rx="1" fill="#2c3e50"/>
+                        <rect x="52" y="88" width="3" height="7" rx="1" fill="#2c3e50"/>
+
+                        <!-- 自然垂放於身側的小手 -->
+                        <rect x="55" y="68" width="3.5" height="4.5" rx="1.5" fill="#fed39f"/>
+                        <rect x="41.5" y="68" width="3.5" height="4.5" rx="1.5" fill="#fed39f"/>
+
+                        <!-- 臉蛋 -->
+                        <rect x="45" y="49" width="10" height="9" rx="2" fill="#fed39f"/>
+
+                        <!-- 蓬鬆金髮 -->
+                        <circle cx="50" cy="48" r="7.5" fill="#f9ca24"/>
+                        <circle cx="45" cy="46" r="4.5" fill="#f9ca24"/>
+                        <circle cx="55" cy="46" r="4.5" fill="#f9ca24"/>
+                        <circle cx="48" cy="44" r="3.8" fill="#ffd166"/>
+
+                        <!-- === 玫瑰花 (右側) === -->
+                        <!-- 玫瑰守護微光 -->
+                        <circle cx="114" cy="74" r="20" fill="url(#roseGlow)"/>
+
+                        <!-- 玻璃罩底座 -->
+                        <ellipse cx="114" cy="95" rx="13" ry="2.5" fill="#2c3e50"/>
+
+                        <!-- 玻璃罩 (保護著小王子的玫瑰) -->
+                        <path d="M 103 95 L 103 76 A 11 11 0 0 1 125 76 L 125 95 Z" fill="rgba(255, 255, 255, 0.06)" stroke="rgba(255, 255, 255, 0.38)" stroke-width="1.2"/>
+                        <circle cx="114" cy="63.5" r="2.2" fill="rgba(255, 255, 255, 0.5)"/>
+
+                        <!-- 玫瑰花枝 (綠莖、葉片與刺) -->
+                        <path d="M 114 94 Q 116 85 113 77" stroke="#27ae60" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                        <path d="M 115 85 Q 120 83 118 87 Q 115 87 115 85 Z" fill="#2ecc71"/>
+                        <line x1="113" y1="88" x2="110" y2="89.5" stroke="#27ae60" stroke-width="1.2" stroke-linecap="round"/>
+
+                        <!-- 玫瑰花瓣 (層次漸層紅花) -->
+                        <ellipse cx="113" cy="73.5" rx="5.5" ry="4.5" fill="#c0392b"/>
+                        <ellipse cx="112" cy="72.5" rx="4.5" ry="4" fill="#e74c3c"/>
+                        <ellipse cx="113.5" cy="71.5" rx="3.5" ry="3" fill="#ff4d6d"/>
+                        <circle cx="112" cy="70.5" r="1.2" fill="#fff" opacity="0.8"/>
+
+                        <!-- 兩人之間飄散的金色星塵 -->
+                        <circle cx="78" cy="66" r="1.5" fill="#ffd166" opacity="0.9"/>
+                        <circle cx="86" cy="58" r="1.2" fill="#ffd166" opacity="0.7"/>
+                        <circle cx="94" cy="70" r="1.4" fill="#ffd166" opacity="0.85"/>
+                        <circle cx="72" cy="78" r="1" fill="#ffd166" opacity="0.6"/>
+                    </svg>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-bold text-amber-100 mb-2 tracking-wider">星際漫遊</h2>
+                <p class="text-xs sm:text-sm text-slate-300 max-w-md leading-relaxed mb-6 font-light">
+                    小王子牽著氣球，在宇宙中漫遊。<br>
+                    按住畫面或空白鍵是上升，放開則下降；<br>
+                    要避開漂移的隕石小行星，遇到其他的人可以打招呼。
+                </p>
+                <button id="btn-start" class="px-8 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold tracking-wider text-sm sm:text-base shadow-lg shadow-amber-500/25 transition transform hover:scale-105 active:scale-95">
+                    開始漫遊（點擊或按空白鍵）
+                </button>
+                <p class="mt-3 text-[11px] text-slate-400">操作：按住 [空白鍵 Space] 或按住畫面時緩緩升起；放開時自然慢降</p>
+            </div>
+
+            <!-- 墜落沉思畫面 (Game Over Modal) -->
+            <div id="game-over-screen" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 transition-all">
+                <div class="max-w-md w-full bg-slate-900/95 border border-amber-500/30 rounded-2xl p-6 sm:p-8 shadow-2xl relative">
+                    <span class="text-3xl block mb-2">✨</span>
+                    <h2 class="text-lg sm:text-xl font-bold text-amber-200 tracking-wider mb-2">
+                        閉上眼睛，重新出發
+                    </h2>
+                    <p id="game-over-reason" class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-5 italic">
+                        真正的東西用眼睛是看不見的。放慢呼吸，用心重新啟程。
+                    </p>
+
+                    <!-- 本次旅程統計 -->
+                    <div class="grid grid-cols-2 gap-3 bg-white/5 rounded-xl p-3 mb-6 border border-white/10">
+                        <div>
+                            <div class="text-[11px] text-slate-400 font-sans">掠過星體群</div>
+                            <div id="final-score" class="text-xl font-bold text-amber-300 font-cinzel">0</div>
+                        </div>
+                        <div>
+                            <div class="text-[11px] text-slate-400 font-sans">收集星星</div>
+                            <div id="final-essence" class="text-xl font-bold text-amber-300 font-cinzel">0</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button id="btn-restart" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold text-xs sm:text-sm tracking-wider transition shadow-md">
+                            閉上眼睛，重新出發 ➔
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- 底部資訊列 -->
+    <footer class="w-full max-w-5xl mx-auto py-2 px-3 text-center text-slate-400 text-[11px] sm:text-xs">
+        <p>創作文本：《小王子》（Le Petit Prince） · 安東尼·德·聖-修伯里</p>
+    </footer>
+
+    <!-- 遊戲邏輯與純代碼音訊核心 -->
+    <script>
+        /* ========================================================
+           1. Web Audio API 音訊合成系統
+           ======================================================== */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            // 氣球飄升浮力音效：空靈柔和的豎琴微風泛音
+            playFlap() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(360, now);
+                osc.frequency.exponentialRampToValueAtTime(480, now + 0.35);
+
+                gain.gain.setValueAtTime(0.045, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+
+            // 成功穿過小行星狹縫：空靈純淨的和弦音
+            playPass() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.04);
+                    gain.gain.setValueAtTime(0.07, now + i * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.35);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.04);
+                    osc.stop(now + i * 0.04 + 0.36);
+                });
+            }
+
+            // 收集麥穗 / 玫瑰微光：清脆八音琴（Music Box）
+            playCollect() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(1174.66, now); // D6
+                osc.frequency.setValueAtTime(1567.98, now + 0.08); // G6
+
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.33);
+            }
+
+            // 撞擊沉思音效：溫和低頻漸弱
+            playHit() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(260, now);
+                osc.frequency.exponentialRampToValueAtTime(90, now + 0.45);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        /* ========================================================
+           2. 畫布初始化與虛擬座標設定
+           ======================================================== */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const V_WIDTH = 800;
+        const V_HEIGHT = 450;
+        canvas.width = V_WIDTH;
+        canvas.height = V_HEIGHT;
+
+        /* ========================================================
+           3. UI 介面元素參照與遊戲狀態
+           ======================================================== */
+        const uiScore = document.getElementById('ui-score');
+        const uiEssence = document.getElementById('ui-essence');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const gameOverReason = document.getElementById('game-over-reason');
+        const finalScore = document.getElementById('final-score');
+        const finalEssence = document.getElementById('final-essence');
+
+        // 對話互動元素
+        const dialogueModal = document.getElementById('dialogue-modal');
+        const charAvatar = document.getElementById('char-avatar');
+        const charPlanet = document.getElementById('char-planet');
+        const charName = document.getElementById('char-name');
+        const dialogueContent = document.getElementById('dialogue-content');
+        const btnDialogueContinue = document.getElementById('btn-dialogue-continue');
+
+        let gameState = 'START'; // 'START' | 'PLAYING' | 'DIALOGUE' | 'GAMEOVER'
+        let currentEncounterObstacle = null;
+        let score = 0;
+        let essenceCount = 0;
+        let lastTime = 0;
+
+        /* ========================================================
+           4. 故事金句資料庫、大人住民與星空粒子
+           ======================================================== */
+        const storyQuotesData = [
+            "「真正重要的東西，用眼睛是看不見的。」",
+            "不知道我的玫瑰，現在怎麼樣了……",
+            "「沙漠之所以美麗，是因為在某處藏著一口水井。」",
+            "「大人生性喜歡數字，從不探問實質的事。」",
+            "「正因你為玫瑰花費了時間，她才如此重要。」",
+            "我的花只有四根刺來保護自己，不知道她現在過得好不好……",
+            "「你的頭髮是金色的，麥浪從此有了意義。」",
+            "「審判自己比審判別人要難得多。」",
+            "「五億顆星星全都在夜空中為你微笑。」"
+        ];
+
+        // 小王子在旅途拜訪的「大人們」資料庫
+        const adultCharacters = [
+            {
+                id: 'king',
+                name: '統治一切的國王',
+                planet: '第 325 號小行星',
+                icon: '👑',
+                color: '#8e44ad',
+                dialogues: [
+                    { speaker: '國王', text: '「請靠近些，讓朕好好端詳你！朕命令你打個呵欠！在朕的王國裡，所有人都必須服從命令。」' },
+                    { speaker: '小王子', text: '「陛下，那您可以命令太陽現在就落山嗎？我想看日落……」' },
+                    { speaker: '國王', text: '「太陽會在今晚七點四十分準時落山！權威首先要建立在合理之上。好啦，朕封你為司法大臣！」' }
+                ],
+                reflection: '小王子思忖：「這些大人真是古怪極了。」'
+            },
+            {
+                id: 'conceited',
+                name: '渴望讚賞的愛虛榮者',
+                planet: '第 326 號小行星',
+                icon: '🎩',
+                color: '#2980b9',
+                dialogues: [
+                    { speaker: '愛虛榮者', text: '「啊哈！一位崇拜者來拜訪我了！快請你鼓掌，只要有人拍手，我就會脫下羽毛帽致謝。」' },
+                    { speaker: '小王子', text: '「可是這顆星球上只有你一個人呀，崇拜你又有什麼意義呢？」' },
+                    { speaker: '愛虛榮者', text: '「不管怎樣，承認我是全星球最帥氣、最富有、最聰明的人吧！請繼續為我鼓掌！」' }
+                ],
+                reflection: '小王子思忖：「虛榮的人除了讚美之外，什麼話也聽不進去。」'
+            },
+            {
+                id: 'businessman',
+                name: '忙著數星星的商人',
+                planet: '第 328 號小行星',
+                icon: '💼',
+                color: '#2c3e50',
+                dialogues: [
+                    { speaker: '商人', text: '「五億零一百六十二萬二千七百三十一顆！別打擾我，我是個嚴肅的人，我正在盤點我的星星財產！」' },
+                    { speaker: '小王子', text: '「可是擁有星星對星星有什麼用處呢？我擁有一朵花，我每天給她澆水；你卻什麼都不能為星星做。」' },
+                    { speaker: '商人', text: '「我能把它們的數量寫在紙條上，鎖進抽屜裡！這就等於擁有了它們！」' }
+                ],
+                reflection: '小王子思忖：「大人看待事物的方式，真的和孩子完全不同。」'
+            },
+            {
+                id: 'lamplighter',
+                name: '忠於職守的點燈人',
+                planet: '第 329 號小行星',
+                icon: '🏮',
+                color: '#d35400',
+                dialogues: [
+                    { speaker: '點燈人', text: '「早上好。熄燈。晚上好。點燈。規矩就是規矩，星球轉得太快了，一分鐘就是一天，我連一秒睡覺的機會都沒有。」' },
+                    { speaker: '小王子', text: '「你每天看了一千四百四十次日落！但如果這讓你痛苦，為什麼不慢下來呢？」' },
+                    { speaker: '點燈人', text: '「因為這就是命令。我最喜歡的是睡覺，但我在這顆星球上唯一能做的只有忠於職守。」' }
+                ],
+                reflection: '小王子思忖：「他是唯一一個我不覺得荒謬的人，因為他關照的是自己以外的事情。」'
+            },
+            {
+                id: 'geographer',
+                name: '閉門造車的地理學家',
+                planet: '第 330 號小行星',
+                icon: '📖',
+                color: '#16a085',
+                dialogues: [
+                    { speaker: '地理學家', text: '「看啊！一位探險家！我是地理學家，專門記錄永恆的山脈與大洋。至於你的花朵？抱歉，我們不記錄短暫脆弱的事物。」' },
+                    { speaker: '小王子', text: '「什麼是短暫脆弱？」' },
+                    { speaker: '地理學家', text: '「意思就是『隨時有消失危險的事物』。你的花朵無法永存。」' }
+                ],
+                reflection: '小王子思忖：「我的花只有四根刺來保護自己，而我卻把她獨自留在了家鄉……」'
+            }
+        ];
+
+        let adultIndex = 0;
+
+        // 漂流星體與隕石主題樣式（純色極簡繪本風）
+        const asteroidThemes = [
+            { name: "紫晶流浪小行星", color: '#706fd3', ringColor: 'rgba(210, 190, 255, 0.4)', isRinged: true },
+            { name: "商人岩鐵流星群", color: '#4b6584', ringColor: 'rgba(165, 177, 194, 0.3)', isRinged: false },
+            { name: "點燈人熔岩赤石", color: '#eb4d4b', ringColor: 'rgba(255, 121, 121, 0.35)', isRinged: false },
+            { name: "虛榮蔚藍隕石核", color: '#45aaf2', ringColor: 'rgba(119, 140, 241, 0.4)', isRinged: true }
+        ];
+
+        const stars = Array.from({ length: 90 }, () => ({
+            x: Math.random() * V_WIDTH,
+            y: Math.random() * V_HEIGHT,
+            size: Math.random() * 1.8 + 0.5,
+            alpha: Math.random() * 0.7 + 0.3,
+            speed: Math.random() * 0.03 + 0.01,
+            twinkleSpeed: Math.random() * 0.003 + 0.002
+        }));
+
+        /* ========================================================
+           5. 主角：繫著氣球的小王子（典雅微風漂浮物理）
+           ======================================================== */
+        let isHoldingUp = false;
+
+        const prince = {
+            x: 140,
+            y: 200,
+            vy: 0,
+            gravity: 0.019,      // 沉降重力再慢一倍（極致舒緩微重力）
+            liftAcc: 0.033,      // 上升浮力再慢一倍（輕柔悠緩如蒲公英）
+            maxAscentSpeed: -0.68,// 限制上升速度，再慢一倍
+            maxFallSpeed: 0.52,  // 限制下沉速度，再慢一倍
+            width: 28,
+            height: 38,
+            rotation: 0,
+            scarfWave: 0,
+            balloons: [
+                { offsetX: -10, offsetY: -36, radius: 15, color: '#f9ca24', stringAnchor: -4 }, // 麥金黃（呼應金髮與圍巾）
+                { offsetX: 8, offsetY: -42, radius: 16, color: '#27ae60', stringAnchor: 2 },  // 經典大衣綠（呼應長袍）
+                { offsetX: -2, offsetY: -52, radius: 14, color: '#e74c3c', stringAnchor: 0 }  // 玫瑰赤紅（呼應領飾與愛花）
+            ]
+        };
+
+        /* ========================================================
+           6. 漂流星體（Asteroids）與前方路上的飄浮箴言（Road Quotes）
+           ======================================================== */
+        let celestialObstacles = [];
+        let roadQuotes = [];
+        let collectibles = [];
+        let sparkParticles = [];
+
+        // 星際間距基數（配合巨型天體，保持大氣開闊感）
+        const BASE_PLANET_SPACING = 580;
+        let spawnCounter = 0;
+        let quoteIndex = 0;
+
+        // 尺寸等級生成器：大天體 vs 迷你小星球
+        function getSmallPlanetRadius() {
+            return 52 + Math.random() * 32;  // 52 ~ 84px（精緻可愛的微型星球/隕石核）
+        }
+
+        function getBigPlanetRadius() {
+            return 185 + Math.random() * 55; // 185 ~ 240px（壯闊磅礴的巨型天體弧線）
+        }
+
+        function spawnCelestialPair(spawnX = V_WIDTH + 100, spacing = BASE_PLANET_SPACING) {
+            // 有 60% 機率讓下方星球站著一位小王子遇見的大人！
+            let adultResident = null;
+            if (spawnCounter % 2 === 0) {
+                adultResident = adultCharacters[adultIndex % adultCharacters.length];
+                adultIndex++;
+            }
+
+            // 嚴格落實「一大一小互補」：上面是大星球，下面就是小星球；或者上面是小星球，下面配大星球，上下絕不相同！
+            const isTopBig = (spawnCounter % 2 === 0);
+            const topRadius = isTopBig ? getBigPlanetRadius() : getSmallPlanetRadius();
+            const bottomRadius = isTopBig ? getSmallPlanetRadius() : getBigPlanetRadius();
+
+            // 確保中央航道安全淨空（176px）
+            const flightCorridorHeight = 176;
+            const corridorCenterY = 195 + (Math.random() - 0.5) * 45;
+
+            // 小型星球往深空留白處退縮，拉開視覺對比與深邃留白感
+            const topRecede = topRadius < 100 ? 25 + Math.random() * 20 : 0;
+            const bottomRecede = bottomRadius < 100 ? 20 + Math.random() * 20 : 0;
+
+            const topY = (corridorCenterY - flightCorridorHeight / 2 - topRecede) - topRadius;
+            const bottomY = (corridorCenterY + flightCorridorHeight / 2 + bottomRecede) + bottomRadius;
+
+            const topOffsetX = (Math.random() - 0.5) * 40;
+            const bottomOffsetX = (Math.random() - 0.5) * 40;
+
+            const theme = asteroidThemes[Math.floor(Math.random() * asteroidThemes.length)];
+
+            celestialObstacles.push({
+                x: spawnX,
+                topOffsetX: topOffsetX,
+                bottomOffsetX: bottomOffsetX,
+                topY: topY,
+                topR: topRadius,
+                bottomY: bottomY,
+                bottomR: bottomRadius,
+                theme: theme,
+                character: adultResident, // 星球上的大人（若有）
+                interacted: false,        // 是否已互動過
+                corridorCenterY: corridorCenterY,
+                passed: false,
+                driftAngle: Math.random() * Math.PI * 2,
+                driftSpeed: Math.random() * 0.002 + 0.001
+            });
+
+            // 嚴格落實「一次只放一個心靈球球（小星星）」
+            spawnCounter++;
+            const itemX = spawnX - spacing * 0.5;
+            const midY = corridorCenterY;
+
+            if (spawnCounter % 2 === 1) {
+                // 生成溫暖的小金星
+                collectibles.push({
+                    x: itemX,
+                    y: midY,
+                    radius: 11,
+                    rotation: 0,
+                    rotSpeed: (Math.random() * 0.004 + 0.003) * (Math.random() < 0.5 ? 1 : -1)
+                });
+            } else {
+                const text = storyQuotesData[quoteIndex % storyQuotesData.length];
+                quoteIndex++;
+                roadQuotes.push({
+                    x: itemX - 80,
+                    y: midY,
+                    text: text,
+                    waveOffset: Math.random() * Math.PI
+                });
+            }
+        }
+
+        function createSparks(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                sparkParticles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3 - 0.4,
+                    size: Math.random() * 2.5 + 1,
+                    color: color,
+                    life: 1
+                });
+            }
+        }
+
+        /* ========================================================
+           7. 操作控制（長按上升、放開緩降）
+           ======================================================== */
+        function setHoldUp(val) {
+            if (val && !isHoldingUp) {
+                audio.init();
+                audio.playFlap();
+            }
+            isHoldingUp = val;
+        }
+
+        function handlePressStart() {
+            audio.init();
+            if (gameState === 'START' || gameState === 'GAMEOVER') {
+                startGame();
+                return;
+            }
+            setHoldUp(true);
+        }
+
+        function handlePressEnd() {
+            setHoldUp(false);
+        }
+
+        function startGame() {
+            audio.init();
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            dialogueModal.classList.add('hidden');
+            score = 0;
+            essenceCount = 0;
+            celestialObstacles = [];
+            roadQuotes = [];
+            collectibles = [];
+            sparkParticles = [];
+            spawnCounter = 0;
+            quoteIndex = 0;
+            adultIndex = 0;
+            currentEncounterObstacle = null;
+            isHoldingUp = false;
+
+            prince.y = 210;
+            prince.vy = -0.1;
+            prince.rotation = 0;
+
+            // 開局第一顆小金星 (x = 260)
+            collectibles.push({
+                x: 260,
+                y: 210,
+                radius: 11,
+                rotation: 0,
+                rotSpeed: 0.003
+            });
+
+            // 第一座巨型小行星 (x = 520)
+            spawnCelestialPair(520, BASE_PLANET_SPACING);
+
+            uiScore.innerText = '0';
+            uiEssence.innerText = '0';
+        }
+
+        // 觸發大人星球對話互動（碰觸時不會死，開啟對話）
+        function triggerAdultDialogue(character, obstacle) {
+            gameState = 'DIALOGUE';
+            isHoldingUp = false;
+            currentEncounterObstacle = obstacle;
+            obstacle.interacted = true;
+
+            // 撥放溫潤的和弦音效
+            audio.playPass();
+            createSparks(prince.x, prince.y, '#ffd166', 15);
+
+            charAvatar.innerText = character.icon;
+            charPlanet.innerText = character.planet;
+            charName.innerText = character.name;
+
+            // 渲染對話
+            let html = '';
+            character.dialogues.forEach(d => {
+                const isPrince = d.speaker === '小王子';
+                html += `
+                    <div class="${isPrince ? 'text-amber-200 pl-3 border-l-2 border-amber-400' : 'text-slate-200'}">
+                        <strong class="${isPrince ? 'text-amber-300' : 'text-rose-300'}">${d.speaker}：</strong>
+                        <span>${d.text}</span>
+                    </div>
+                `;
+            });
+            html += `<div class="text-xs text-slate-400 italic pt-1">${character.reflection}</div>`;
+            dialogueContent.innerHTML = html;
+
+            dialogueModal.classList.remove('hidden');
+        }
+
+        // 從星球對話完畢，在該星球安全航道上重新啟程
+        function continueFromPlanet() {
+            dialogueModal.classList.add('hidden');
+            if (currentEncounterObstacle) {
+                // 將小王子安穩放置在該星球中央飛行走廊，繼續前進
+                prince.y = currentEncounterObstacle.corridorCenterY;
+                prince.vy = -0.1;
+                prince.rotation = 0;
+                createSparks(prince.x, prince.y, '#ffd166', 12);
+            }
+            gameState = 'PLAYING';
+            currentEncounterObstacle = null;
+        }
+
+        btnDialogueContinue.addEventListener('click', continueFromPlanet);
+
+        function triggerGameOver(reason) {
+            gameState = 'GAMEOVER';
+            isHoldingUp = false;
+            audio.playHit();
+            finalScore.innerText = score;
+            finalEssence.innerText = essenceCount;
+            gameOverReason.innerText = reason;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === ' ') {
+                e.preventDefault();
+                if (gameState === 'DIALOGUE') {
+                    continueFromPlanet();
+                    return;
+                }
+                if (e.repeat) return;
+                handlePressStart();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === ' ') {
+                e.preventDefault();
+                handlePressEnd();
+            }
+        });
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            if (gameState === 'DIALOGUE') return;
+            handlePressStart();
+        });
+
+        // 放開按鍵 / 觸控時停止浮升並開始輕柔下落
+        window.addEventListener('pointerup', handlePressEnd);
+        window.addEventListener('pointercancel', handlePressEnd);
+
+        // 綁定開始與重新啟程按鈕
+        const btnStart = document.getElementById('btn-start');
+        if (btnStart) {
+            btnStart.addEventListener('click', (e) => {
+                e.stopPropagation();
+                startGame();
+            });
+        }
+        const btnRestart = document.getElementById('btn-restart');
+        if (btnRestart) {
+            btnRestart.addEventListener('click', (e) => {
+                e.stopPropagation();
+                startGame();
+            });
+        }
+
+        /* 繪製深邃星空與星塵微粒 */
+        function drawSky(ctx) {
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
+            bgGrad.addColorStop(0, '#090a16');
+            bgGrad.addColorStop(0.6, '#101328');
+            bgGrad.addColorStop(1, '#181b36');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+            stars.forEach(s => {
+                s.x -= s.speed;
+                if (s.x < 0) s.x = V_WIDTH;
+                s.alpha += Math.sin(Date.now() * s.twinkleSpeed) * 0.005;
+                const a = Math.max(0.15, Math.min(0.9, s.alpha));
+
+                ctx.fillStyle = `rgba(255, 255, 255, ${a})`;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        /* 繪製懸浮在前方星路上的箴言緞帶（路過就好，不變暗也不發聲） */
+        function drawRoadQuotes(ctx) {
+            roadQuotes.forEach(rq => {
+                ctx.save();
+                ctx.translate(rq.x, rq.y);
+
+                const floatY = Math.sin(Date.now() * 0.0018 + rq.waveOffset) * 4;
+
+                const grad = ctx.createRadialGradient(110, floatY, 5, 110, floatY, 130);
+                grad.addColorStop(0, 'rgba(255, 209, 102, 0.22)');
+                grad.addColorStop(1, 'rgba(255, 209, 102, 0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(-20, floatY - 22, 260, 44);
+
+                ctx.font = '13px "Noto Serif TC", serif';
+                ctx.fillStyle = '#ffd166'; // 永遠維持原本柔和的金黃微光，不變暗
+                ctx.shadowColor = 'rgba(255, 209, 102, 0.6)';
+                ctx.shadowBlur = 8;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(rq.text, 0, floatY);
+
+                ctx.restore();
+            });
+        }
+
+        /* 繪製漂流的隕石群與小行星天體（包含星球上的大人） */
+        function drawCelestialObstacles(ctx) {
+            celestialObstacles.forEach(obs => {
+                ctx.save();
+                obs.driftAngle += obs.driftSpeed;
+                const bobY = Math.sin(obs.driftAngle) * 3;
+
+                const topX = obs.x + (obs.topOffsetX || 0);
+                const bottomX = obs.x + (obs.bottomOffsetX || 0);
+
+                // 1. 繪製上方星體
+                drawSingleAsteroid(ctx, topX, obs.topY + bobY, obs.topR, obs.theme, true);
+
+                // 2. 繪製下方星體
+                drawSingleAsteroid(ctx, bottomX, obs.bottomY - bobY, obs.bottomR, obs.theme, false);
+
+                // 3. 若下方星球住著大人，繪製大人與提示氣泡
+                if (obs.character) {
+                    drawCharacterOnAsteroid(ctx, bottomX, (obs.bottomY - bobY) - obs.bottomR, obs.character, obs.interacted);
+                }
+
+                ctx.restore();
+            });
+        }
+
+        /* 在星球地平線頂部繪製大人剪影與互動光芒 */
+        function drawCharacterOnAsteroid(ctx, cx, surfaceY, charData, interacted) {
+            ctx.save();
+            ctx.translate(cx, surfaceY);
+
+            // 角色身形底座與光暈
+            const glow = ctx.createRadialGradient(0, -10, 2, 0, -10, 26);
+            glow.addColorStop(0, interacted ? 'rgba(255, 209, 102, 0.2)' : 'rgba(255, 209, 102, 0.55)');
+            glow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, -10, 26, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 繪製大人立體幾何小剪影
+            // 身體外袍
+            ctx.fillStyle = charData.color || '#8e44ad';
+            ctx.beginPath();
+            ctx.moveTo(-7, 0);
+            ctx.lineTo(7, 0);
+            ctx.lineTo(5, -16);
+            ctx.lineTo(-5, -16);
+            ctx.closePath();
+            ctx.fill();
+
+            // 頭部
+            ctx.fillStyle = '#fed39f';
+            ctx.beginPath();
+            ctx.arc(0, -20, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 角色專屬標誌 (國王皇冠、點燈人路燈等)
+            if (charData.id === 'king') {
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.moveTo(-4, -24);
+                ctx.lineTo(-2, -28);
+                ctx.lineTo(0, -25);
+                ctx.lineTo(2, -28);
+                ctx.lineTo(4, -24);
+                ctx.closePath();
+                ctx.fill();
+            } else if (charData.id === 'lamplighter') {
+                // 復古路燈桿
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(8, 0);
+                ctx.lineTo(8, -26);
+                ctx.stroke();
+                // 燈火
+                ctx.fillStyle = '#ffeaa7';
+                ctx.beginPath();
+                ctx.arc(8, -26, 3, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (charData.id === 'conceited') {
+                // 誇張高禮帽
+                ctx.fillStyle = '#2980b9';
+                ctx.fillRect(-5, -28, 10, 6);
+                ctx.fillRect(-7, -23, 14, 2);
+            }
+
+            // 互動氣泡標籤（若未對話過，顯示醒目的對話提示）
+            if (!interacted) {
+                const bubbleFloat = Math.sin(Date.now() * 0.004) * 3;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.strokeStyle = '#ffd166';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(-28, -52 + bubbleFloat, 56, 18, 9);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.font = '10px "Noto Serif TC", sans-serif';
+                ctx.fillStyle = '#ffd166';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${charData.icon} 拜訪`, 0, -40 + bubbleFloat);
+            }
+
+            ctx.restore();
+        }
+
+        function drawSingleAsteroid(ctx, cx, cy, r, theme, isTop) {
+            ctx.save();
+
+            // 若有星環則繪製極簡純淨星環（控制外擴幅度，避免與鄰近星體干涉）
+            if (theme.isRinged) {
+                ctx.strokeStyle = theme.ringColor;
+                ctx.lineWidth = 3.5;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, r * 1.2, r * 0.35, Math.PI / 6, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 純色星體（如氣球般純淨簡約，無厚重黑影漸層與雜亂隕石坑）
+            ctx.fillStyle = theme.color;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 簡約純淨的小圓點高光（與氣球的繪本質感風格完全統一）
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.32)';
+            ctx.beginPath();
+            const hlAngle = isTop ? Math.PI * 0.35 : -Math.PI * 0.35;
+            ctx.arc(cx + Math.cos(hlAngle) * (r * 0.42), cy + Math.sin(hlAngle) * (r * 0.42), r * 0.22, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        /* 繪製星星收集品：緩慢旋轉的金黃小星，安靜漂浮 */
+        function drawCollectibles(ctx) {
+            collectibles.forEach(item => {
+                ctx.save();
+                item.rotation += item.rotSpeed;
+
+                ctx.translate(item.x, item.y);
+                ctx.rotate(item.rotation);
+
+                // 柔和暖金光暈
+                const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 18);
+                glow.addColorStop(0, 'rgba(255, 209, 102, 0.85)');
+                glow.addColorStop(0.5, 'rgba(255, 209, 102, 0.25)');
+                glow.addColorStop(1, 'rgba(255, 209, 102, 0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(0, 0, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 繪製五角小金星
+                ctx.fillStyle = '#ffd166';
+                ctx.strokeStyle = '#fff3bf';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                const spikes = 5;
+                const outerRadius = 8.5;
+                const innerRadius = 4.2;
+                let rot = Math.PI / 2 * 3;
+                let step = Math.PI / spikes;
+
+                ctx.moveTo(0, -outerRadius);
+                for (let i = 0; i < spikes; i++) {
+                    let x = Math.cos(rot) * outerRadius;
+                    let y = Math.sin(rot) * outerRadius;
+                    ctx.lineTo(x, y);
+                    rot += step;
+
+                    x = Math.cos(rot) * innerRadius;
+                    y = Math.sin(rot) * innerRadius;
+                    ctx.lineTo(x, y);
+                    rot += step;
+                }
+                ctx.lineTo(0, -outerRadius);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // 核心晶瑩高光
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-1.5, -1.5, 1.8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            });
+        }
+
+        /* 繪製小王子角色與三顆牽引氣球 */
+        function drawPrince(ctx) {
+            ctx.save();
+            ctx.translate(prince.x + prince.width / 2, prince.y + prince.height / 2);
+
+            prince.rotation = Math.min(Math.max(prince.vy * 0.035, -0.16), 0.18);
+            ctx.rotate(prince.rotation);
+
+            const px = -prince.width / 2;
+            const py = -prince.height / 2;
+
+            // 1. 牽引氣球與細繩（小王子繪本手繪配色與溫暖棉線）
+            prince.balloons.forEach((b, idx) => {
+                const sway = Math.sin(Date.now() * 0.0022 + idx * 1.5) * 2.5;
+                const bx = px + b.offsetX + sway;
+                const by = py + b.offsetY;
+
+                // 柔和溫暖的繪本手感牽引線
+                ctx.strokeStyle = 'rgba(255, 235, 180, 0.55)';
+                ctx.lineWidth = 1.1;
+                ctx.beginPath();
+                ctx.moveTo(px + 14 + b.stringAnchor, py + 12);
+                ctx.quadraticCurveTo(bx, (by + py + 12) / 2, bx, by + b.radius);
+                ctx.stroke();
+
+                // 純色氣球（無黑圈陰影，純淨水彩繪本感）
+                ctx.fillStyle = b.color;
+                ctx.beginPath();
+                ctx.ellipse(bx, by, b.radius, b.radius * 1.15, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 簡約純淨的小圓點高光（純色亮點，不帶黑邊）
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.beginPath();
+                ctx.arc(bx - b.radius * 0.28, by - b.radius * 0.32, b.radius * 0.24, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 氣球打結處
+                ctx.fillStyle = b.color;
+                ctx.beginPath();
+                ctx.moveTo(bx - 2, by + b.radius * 1.15);
+                ctx.lineTo(bx + 2, by + b.radius * 1.15);
+                ctx.lineTo(bx, by + b.radius * 1.15 + 3);
+                ctx.closePath();
+                ctx.fill();
+            });
+
+            // 2. 小王子的身體與金黃長圍巾
+            prince.scarfWave += 0.055;
+            const scarfWave = Math.sin(prince.scarfWave) * 3.5;
+
+            ctx.strokeStyle = '#ffd166';
+            ctx.fillStyle = '#f9ca24';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(px + 8, py + 14);
+            ctx.quadraticCurveTo(px - 14, py + 10 + scarfWave, px - 26, py + 16 - scarfWave);
+            ctx.stroke();
+
+            // 綠色經典大衣長袍（收窄修長梯形）
+            ctx.fillStyle = '#27ae60';
+            ctx.beginPath();
+            ctx.moveTo(px + 8, py + 14);
+            ctx.lineTo(px + 20, py + 14);
+            ctx.lineTo(px + 22, py + 34);
+            ctx.lineTo(px + 6, py + 34);
+            ctx.closePath();
+            ctx.fill();
+
+            // 紅領口與金色腰帶（等比修身微調）
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(px + 11, py + 14, 6, 3);
+            ctx.fillStyle = '#f1c40f';
+            ctx.fillRect(px + 11, py + 24, 6, 2.5);
+
+            // 雙腿（纖細少年的步伐）
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(px + 9, py + 34, 3, 6);
+            ctx.fillRect(px + 16, py + 34, 3, 6);
+
+            // 握住氣球的小手
+            ctx.fillStyle = '#fed39f';
+            ctx.fillRect(px + 12, py + 8, 4, 6);
+
+            // 臉蛋
+            ctx.fillStyle = '#fed39f';
+            ctx.fillRect(px + 8, py + 4, 12, 10);
+
+            // 蓬鬆金髮
+            ctx.fillStyle = '#f9ca24';
+            ctx.beginPath();
+            ctx.arc(px + 14, py + 4, 8, 0, Math.PI * 2);
+            ctx.arc(px + 9, py + 2, 5, 0, Math.PI * 2);
+            ctx.arc(px + 19, py + 2, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        /* ========================================================
+           9. 遊戲核心物理與碰撞迴圈
+           ======================================================== */
+        function updateGame(dt) {
+            if (gameState !== 'PLAYING') return;
+
+            // 小王子漂浮物理：長按緩慢持續往上，放開緩慢往下
+            if (isHoldingUp) {
+                prince.vy -= prince.liftAcc;
+                if (prince.vy < prince.maxAscentSpeed) {
+                    prince.vy = prince.maxAscentSpeed;
+                }
+            } else {
+                prince.vy += prince.gravity;
+                if (prince.vy > prince.maxFallSpeed) {
+                    prince.vy = prince.maxFallSpeed;
+                }
+            }
+            prince.y += prince.vy;
+
+            // 天花板柔和防撞
+            if (prince.y < 8) {
+                prince.y = 8;
+                prince.vy = 0.12;
+            }
+            // 觸底判定
+            if (prince.y + prince.height >= V_HEIGHT - 6) {
+                triggerGameOver("被沉重的引力牽絆了腳步……閉上眼睛，用心重新出發。");
+                return;
+            }
+
+            // 地圖巡航速度
+            const gameSpeed = 0.175;
+
+            // 依距離連續生成巨型天體
+            const lastObs = celestialObstacles[celestialObstacles.length - 1];
+            if (lastObs && lastObs.x < V_WIDTH + 80) {
+                const nextSpacing = 560 + Math.random() * 80;
+                spawnCelestialPair(lastObs.x + nextSpacing, nextSpacing);
+            }
+
+            // 1. 更新前方路上的箴言名言帶（純粹路過，無音效、不變暗）
+            for (let i = roadQuotes.length - 1; i >= 0; i--) {
+                const rq = roadQuotes[i];
+                rq.x -= gameSpeed;
+
+                if (rq.x < -450) {
+                    roadQuotes.splice(i, 1);
+                }
+            }
+
+            // 2. 更新漂移小行星與大人星球判定
+            const princeCenter = {
+                x: prince.x + prince.width / 2,
+                y: prince.y + prince.height / 2
+            };
+
+            for (let i = celestialObstacles.length - 1; i >= 0; i--) {
+                const obs = celestialObstacles[i];
+                obs.x -= gameSpeed;
+
+                // 掠過成功計分
+                if (!obs.passed && obs.x < prince.x) {
+                    obs.passed = true;
+                    score += 1;
+                    uiScore.innerText = score;
+                    createSparks(prince.x, prince.y, '#ffd166', 6);
+                }
+
+                const topX = obs.x + (obs.topOffsetX || 0);
+                const bottomX = obs.x + (obs.bottomOffsetX || 0);
+                const bobY = Math.sin(obs.driftAngle) * 3;
+
+                const topDist = Math.hypot(princeCenter.x - topX, princeCenter.y - (obs.topY + bobY));
+                const bottomDist = Math.hypot(princeCenter.x - bottomX, princeCenter.y - (obs.bottomY - bobY));
+
+                const hitSafeMargin = 14;
+
+                // 上方星體碰撞（上方星體無大人）
+                if (topDist < (obs.topR - hitSafeMargin)) {
+                    triggerGameOver(`雙眼暫時被「${obs.theme.name}」所遮蔽。真正重要的東西，用眼睛是看不見的。`);
+                    return;
+                }
+
+                // 下方星體碰撞
+                if (bottomDist < (obs.bottomR - hitSafeMargin)) {
+                    if (obs.character) {
+                        // 🌟 星球上住著大人：不會死！觸發對話或輕柔滑行
+                        if (!obs.interacted) {
+                            triggerAdultDialogue(obs.character, obs);
+                            return;
+                        } else {
+                            // 已對話過，柔和微彈回航道，不觸發死亡
+                            prince.vy = -0.35;
+                            prince.y -= 1.5;
+                        }
+                    } else {
+                        // 無人荒蕪隕石，觸發沉思
+                        triggerGameOver(`碰觸了漫遊的「${obs.theme.name}」。靜下心來，閉上眼睛重新出發。`);
+                        return;
+                    }
+                }
+
+                if (obs.x < -150) {
+                    celestialObstacles.splice(i, 1);
+                }
+            }
+
+            // 3. 更新收集品（星星）
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                const item = collectibles[i];
+                item.x -= gameSpeed;
+
+                const dist = Math.hypot(item.x - (prince.x + prince.width / 2), item.y - (prince.y + prince.height / 2));
+                if (dist < item.radius + 22) {
+                    essenceCount += 1;
+                    uiEssence.innerText = essenceCount;
+                    audio.playCollect();
+                    createSparks(item.x, item.y, '#ffd166', 8);
+                    collectibles.splice(i, 1);
+                    continue;
+                }
+
+                if (item.x < -30) {
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            // 4. 更新星光粒子
+            for (let i = sparkParticles.length - 1; i >= 0; i--) {
+                const sp = sparkParticles[i];
+                sp.x += sp.vx;
+                sp.y += sp.vy;
+                sp.life -= 0.035;
+                if (sp.life <= 0) sparkParticles.splice(i, 1);
+            }
+        }
+
+        /* 渲染主畫面 */
+        function render() {
+            ctx.save();
+            ctx.scale(canvas.width / V_WIDTH, canvas.height / V_HEIGHT);
+
+            drawSky(ctx);
+            drawCelestialObstacles(ctx);
+            drawRoadQuotes(ctx);
+            drawCollectibles(ctx);
+
+            // 繪製粒子
+            sparkParticles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            drawPrince(ctx);
+
+            ctx.restore();
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            updateGame(Math.min(dt, 0.1));
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        requestAnimationFrame(gameLoop);
+
+        /* ========================================================
+           10. 音效開關控制
+           ======================================================== */
+        const btnSound = document.getElementById('btn-sound');
+        const soundIcon = document.getElementById('sound-icon');
+        const soundText = document.getElementById('sound-text');
+        btnSound.addEventListener('click', () => {
+            const isMuted = audio.toggleMute();
+            soundIcon.innerText = isMuted ? '🔇' : '🔔';
+            soundText.innerText = isMuted ? '音效：關' : '音效：開';
+        });
+
+    </script>
+</body>
+</html>
